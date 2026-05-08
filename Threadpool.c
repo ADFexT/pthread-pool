@@ -115,6 +115,7 @@ void thread_pool_enqueue(Threadpool *pool,void (*func)(void *arg),void *arg){
     }
 
     pthread_cond_signal(&pool->cond);
+    pthread_mutex_unlock(&pool->mutex);
 }
 
 //销毁线程池
