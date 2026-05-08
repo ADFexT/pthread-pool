@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "Threadpool.h"
 
 //线程入口函数
@@ -19,13 +20,14 @@ static void* worker_routine(void *arg){
         TaskNode *task = pool->task_queue_head;
         pool->task_queue_head = task->next;
         if(pool->task_queue_head == NULL){
-            pool->task_queue_tail == NULL;
+            pool->task_queue_tail = NULL;
         }
         pthread_mutex_unlock(&pool->mutex);
 
         task->func(task->arg);
         free(task);
     }
+    return NULL; 
 }
 
 //创建线程池
@@ -42,18 +44,21 @@ Threadpool *thread_pool_create(int thread_count){
 
     //初始化条件变量与互斥锁
     if (pthread_mutex_init(&pool->mutex,NULL)!=0){
+        printf("互斥锁初始化失败\n");
         free(pool);
         return NULL;
     }
     
     if (pthread_cond_init(&pool->cond,NULL)!=0){
+        printf("条件变量初始化失败\n");
         free(pool);
         return NULL;
     }
     
     //创建线程数组
-    pthread_t *threads = (pthread_t *)malloc(sizeof(pthread_t)*thread_count);
+    pool->threads = (pthread_t *)malloc(sizeof(pthread_t)*thread_count);
     if(!pool->threads){
+        printf("线程数组创建失败\n");
         pthread_cond_destroy(&pool->cond);
         pthread_mutex_destroy(&pool->mutex);
         free(pool);
@@ -63,8 +68,9 @@ Threadpool *thread_pool_create(int thread_count){
     //创建线程
     for (size_t i = 0; i < thread_count; i++)
     {
-        if(pthread_create(pool->threads[i],NULL,worker_routine,pool)!=0){
+        if(pthread_create(pool->threads+i,NULL,worker_routine,pool)!=0){
             //处理已经创建的线程
+            printf("线程创建失败，处理已创建线程\n");
             for (size_t j = 0; j < i; j++)
             {
                 pthread_join(pool->threads[j],NULL);
@@ -81,8 +87,11 @@ Threadpool *thread_pool_create(int thread_count){
 }
 
 //任务提交到队列
-void thread_pool_enqueue(Threadpool *pool,void (*func)(void *),void *arg){
-    if (!pool || !func) return;
+void thread_pool_enqueue(Threadpool *pool,void (*func)(void *arg),void *arg){
+    if (!pool || !func){
+        printf("线程池不存在或任务不存在\n");
+        return;
+    } 
     
     TaskNode *task = (TaskNode *)malloc(sizeof(TaskNode));
     if(!task) return;
@@ -106,7 +115,6 @@ void thread_pool_enqueue(Threadpool *pool,void (*func)(void *),void *arg){
     }
 
     pthread_cond_signal(&pool->cond);
-    pthread_mutex_destroy(&pool->mutex);
 }
 
 //销毁线程池

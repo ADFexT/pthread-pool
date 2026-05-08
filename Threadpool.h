@@ -5,9 +5,9 @@
 
 //任务链表结构体
 typedef struct TaskNode{
-    void (*func)(void *);
+    void (*func)(void *arg);
     void *arg;
-    struct tasknode *next;
+    struct TaskNode *next;
 }TaskNode;
 
 //线程池结构体
@@ -23,6 +23,6 @@ typedef struct Threadpool{
 
 //API
 Threadpool *thread_pool_create(int thread_count);
-void thread_pool_enqueue(Threadpool *pool,void (*func)(void *),void *arg);
+void thread_pool_enqueue(Threadpool *pool,void (*func)(void *arg),void *arg);
 void thread_pool_destroy(Threadpool *pool);
 #endif
